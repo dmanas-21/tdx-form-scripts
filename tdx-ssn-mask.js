@@ -1,21 +1,24 @@
-(function () {
-  // Parse "key: value" lines out of a config block into an object.
-  function parseConfig(el) {
-    var cfg = {};
-    el.textContent.split('\n').forEach(function (line) {
-      var i = line.indexOf(':');
-      if (i === -1) return;
-      var key = line.slice(0, i).trim().toLowerCase();
-      var val = line.slice(i + 1).trim();
-      if (key && val) cfg[key] = val;
+(function (window, document, $) {
+  'use strict';
+
+  if (!$) return;
+
+  function parseConfigText(text) {
+    var config = {};
+    String(text || '').replace(/\s+/g, ' ').trim().split(';').forEach(function (part) {
+      part = $.trim(part);
+      if (!part) return;
+      var idx = part.indexOf('=');
+      if (idx < 0) return;
+      config[$.trim(part.slice(0, idx))] = $.trim(part.slice(idx + 1));
     });
-    return cfg;
+    return config;
   }
 
-  function selectorFrom(cfg) {
-    if (cfg.selector) return cfg.selector;
-    if (cfg.id) return '[id="' + cfg.id + '"]';
-    return null;
+  function normalizeAttributeId(value) {
+    value = String(value || '').trim();
+    var match = value.match(/^f?(\d+)$/i);
+    return match ? match[1] : null;
   }
 
   function formatSSN(digits) {
@@ -26,46 +29,56 @@
     return out;
   }
 
-  function enhance(field) {
-    if (field.dataset.ssnEnhanced) return;   // don't double-bind
-    field.dataset.ssnEnhanced = 'true';
+  function applySSNMask($input) {
+    if ($input.data('ssnMaskApplied')) return;
+    $input.data('ssnMaskApplied', true);
 
-    field.setAttribute('maxlength', '11');    // 9 digits + 2 dashes
-    field.setAttribute('inputmode', 'numeric');
-    field.setAttribute('autocomplete', 'off');
+    $input.attr('maxlength', '11');
+    $input.attr('inputmode', 'numeric');
+    $input.attr('autocomplete', 'off');
+    $input.css({ 'webkitTextSecurity': 'disc', 'text-security': 'disc' });
 
-    field.style.webkitTextSecurity = 'disc';
-    field.style.textSecurity = 'disc';
-
-    field.addEventListener('input', function () {
-      var caretAtEnd = field.selectionStart === field.value.length;
-      field.value = formatSSN(field.value);
-      if (caretAtEnd) field.setSelectionRange(field.value.length, field.value.length);
+    $input.on('input.ssnmask', function () {
+      var atEnd = this.selectionStart === this.value.length;
+      this.value = formatSSN(this.value);
+      if (atEnd) this.setSelectionRange(this.value.length, this.value.length);
     });
 
-    field.addEventListener('focus', function () {
-      field.style.webkitTextSecurity = 'none';
-      field.style.textSecurity = 'none';
+    $input.on('focus.ssnmask', function () {
+      $input.css({ 'webkitTextSecurity': 'none', 'text-security': 'none' });
     });
-    field.addEventListener('blur', function () {
-      field.style.webkitTextSecurity = 'disc';
-      field.style.textSecurity = 'disc';
-      var valid = /^\d{3}-\d{2}-\d{4}$/.test(field.value);
-      field.classList.toggle('is-invalid', field.value.length > 0 && !valid);
+
+    $input.on('blur.ssnmask', function () {
+      $input.css({ 'webkitTextSecurity': 'disc', 'text-security': 'disc' });
+      var valid = /^\d{3}-\d{2}-\d{4}$/.test($input.val());
+      $input.toggleClass('is-invalid', $input.val().length > 0 && !valid);
     });
   }
 
-  function scan() {
-    document.querySelectorAll('.tdx-ssn-mask').forEach(function (block) {
-      var sel = selectorFrom(parseConfig(block));
-      if (!sel) return;
-      document.querySelectorAll(sel).forEach(enhance);
+  function initWidgets() {
+    $('.tdxfr-widget').each(function () {
+      var config = parseConfigText($(this).text());
+      if (String(config.widget || '').toLowerCase() !== 'ssn-mask') return;
+
+      var id = normalizeAttributeId(config.target);
+      if (!id) return;
+
+      var $field = $('#attribute' + id).first();
+      if (!$field.length) return;
+
+      applySSNMask($field);
     });
   }
 
-  if (document.readyState !== 'loading') scan();
-  else document.addEventListener('DOMContentLoaded', scan);
+  function init() {
+    initWidgets();
+    setTimeout(initWidgets, 600);
+  }
 
-  // Script loads globally; config + fields appear per form, possibly late.
-  new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
-})();
+  if (document.readyState === 'loading') {
+    $(init);
+  } else {
+    init();
+  }
+
+})(window, document, window.jQuery);

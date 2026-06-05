@@ -1,4 +1,4 @@
-(function (window, document, $) {
+function (window, document, $) {
   'use strict';
 
   if (!$) return;
@@ -81,4 +81,4 @@
     init();
   }
 
-})(window, document, window.jQuery);
+}

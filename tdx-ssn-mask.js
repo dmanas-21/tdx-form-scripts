@@ -1,8 +1,22 @@
 (function () {
-  // ---- CONFIG: adjust the selector to match your SSN field ----
-  // Inspect the field in DevTools. TDX custom attributes often render with
-  // ids like "attribute12345" or have a label you can match on.
-  var SSN_SELECTOR = 'input[id*="SSN"], input[data-fieldname="SSN"]';
+  // Parse "key: value" lines out of a config block into an object.
+  function parseConfig(el) {
+    var cfg = {};
+    el.textContent.split('\n').forEach(function (line) {
+      var i = line.indexOf(':');
+      if (i === -1) return;
+      var key = line.slice(0, i).trim().toLowerCase();
+      var val = line.slice(i + 1).trim();
+      if (key && val) cfg[key] = val;
+    });
+    return cfg;
+  }
+
+  function selectorFrom(cfg) {
+    if (cfg.selector) return cfg.selector;
+    if (cfg.id) return '[id="' + cfg.id + '"]';
+    return null;
+  }
 
   function formatSSN(digits) {
     digits = digits.replace(/\D/g, '').slice(0, 9);
@@ -20,7 +34,6 @@
     field.setAttribute('inputmode', 'numeric');
     field.setAttribute('autocomplete', 'off');
 
-    // Visual masking: render as dots but keep the real value in .value
     field.style.webkitTextSecurity = 'disc';
     field.style.textSecurity = 'disc';
 
@@ -30,7 +43,6 @@
       if (caretAtEnd) field.setSelectionRange(field.value.length, field.value.length);
     });
 
-    // Reveal while typing, hide when they click away
     field.addEventListener('focus', function () {
       field.style.webkitTextSecurity = 'none';
       field.style.textSecurity = 'none';
@@ -38,22 +50,22 @@
     field.addEventListener('blur', function () {
       field.style.webkitTextSecurity = 'disc';
       field.style.textSecurity = 'disc';
-
-      // Optional format validation
       var valid = /^\d{3}-\d{2}-\d{4}$/.test(field.value);
       field.classList.toggle('is-invalid', field.value.length > 0 && !valid);
     });
   }
 
   function scan() {
-    document.querySelectorAll(SSN_SELECTOR).forEach(enhance);
+    document.querySelectorAll('.tdx-ssn-mask').forEach(function (block) {
+      var sel = selectorFrom(parseConfig(block));
+      if (!sel) return;
+      document.querySelectorAll(sel).forEach(enhance);
+    });
   }
 
-  // Run now, and re-run as TDX injects fields dynamically
   if (document.readyState !== 'loading') scan();
   else document.addEventListener('DOMContentLoaded', scan);
 
+  // Script loads globally; config + fields appear per form, possibly late.
   new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
 })();
-
-Get Outlook for iOS

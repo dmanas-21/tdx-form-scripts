@@ -1,33 +1,35 @@
- var CONTACT_FIELD_GROUPS = [
-    'attribute37204',   // Full Name
-    'attribute37254',
-    'attribute37252',
-    'attribute37253'
+(function () {
+
+  var CONTACT_FIELD_GROUPS = [
+    'attribute37204-grp',   // Full Name
+    'attribute37254-grp',   // Personal Email Address
+    'attribute37252-grp',   // Primary Phone
+    'attribute37253-grp'    // Secondary Phone
   ];
- 
+
   function hideFields() {
     CONTACT_FIELD_GROUPS.forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
   }
- 
+
   function showFields() {
     CONTACT_FIELD_GROUPS.forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.style.display = '';
     });
   }
- 
+
   function init() {
     var toggle = document.querySelector('.tdx-toggle');
     if (!toggle) return;
- 
+
     // Hide fields on page load
     hideFields();
- 
+
     var isOpen = false;
- 
+
     toggle.addEventListener('click', function () {
       isOpen = !isOpen;
       if (isOpen) {
@@ -41,11 +43,11 @@
       }
     });
   }
- 
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
- 
+
 })();
